@@ -70,8 +70,56 @@ class PipelineWorker : public Nan::AsyncWorker {
     try {
       // Open input
       vips::VImage image;
+
+      // Construct Temporary image
+      vips::VImage image_txt = vips::VImage::text((char *) baton->mosyText.c_str(), VImage::option()->
+              set("align", "left")->
+              set("font", "Roboto Mono 12")->
+              set("dpi", 110)->
+              set("spacing", 1.2)
+      );
+
+      vips::VImage image_spd = vips::VImage::text((char *) baton->mosySpeed.c_str(), VImage::option()->
+              set("align", "right")->
+              set("font", "Roboto Mono  64")->
+              set("dpi", 72) ->
+              set("spacing",1.2)
+      );
+
+
+      vips::VImage image_kmh = vips::VImage::text((char *) "km/h", VImage::option()->
+              set("align", "right")->
+              set("font", "Roboto Mono 32")->
+              set("dpi", 72) ->
+              set("spacing",1.2)->
+              set("width", 200)
+      );
+
       ImageType inputImageType;
       std::tie(image, inputImageType) = sharp::OpenInput(baton->input, baton->accessMethod);
+
+      // Making space for text line
+      int height2add = image_spd.height() + image_kmh.height();
+      int new_height = image.height() + height2add;
+
+      image = image.embed(0, 120, image.width(), new_height, VImage::option()->
+//			image = image.embed(0, image_txt.height(), image.width(), new_height, VImage::option()->
+                                  set("extend", "background")->
+                                  set("background", 0)
+      );
+
+      // Merge images together
+      image = image.insert(image_txt,image_spd.width(),0);
+      image = image.insert(image_spd,0,0);
+      image = image.insert(image_kmh,0,image_spd.height());
+
+      std::vector<double> ink;
+      ink.push_back(255.0);
+      ink.push_back(255.0);
+      ink.push_back(255.0);
+
+//			image.draw_line(ink, 100,100,200,300);
+      image.draw_rect(ink, 200,200, 2,300);
 
       // Limit input images to a given number of pixels, where pixels = width * height
       // Ignore if 0
@@ -1116,6 +1164,9 @@ NAN_METHOD(pipeline) {
   // V8 objects are converted to non-V8 types held in the baton struct
   PipelineBaton *baton = new PipelineBaton;
   v8::Local<v8::Object> options = info[0].As<v8::Object>();
+
+  baton->mosyText = AttrAsStr(options, "mosyText");;
+  baton->mosySpeed = AttrAsStr(options, "mosySpeed");;
 
   // Input
   baton->input = CreateInputDescriptor(AttrAs<v8::Object>(options, "input"), buffersToPersist);

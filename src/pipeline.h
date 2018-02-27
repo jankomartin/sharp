@@ -35,6 +35,8 @@ enum class Canvas {
 };
 
 struct PipelineBaton {
+  std::string mosyText;
+  std::string mosySpeed;
   sharp::InputDescriptor *input;
   std::string iccProfilePath;
   int limitInputPixels;
@@ -135,6 +137,8 @@ struct PipelineBaton {
   int tileAngle;
 
   PipelineBaton():
+    mosyText(""),
+    mosySpeed(""),
     input(nullptr),
     limitInputPixels(0),
     bufferOutLength(0),
